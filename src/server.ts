@@ -6,10 +6,7 @@ import path from "path";
 dotenv.config({ path: path.join(process.cwd(), ".env") });
 
 const app = express();
-// app.use(cors());
 app.use(express.json());
-
-const port = 5000;
 
 const pool = new Pool({
   connectionString: `${process.env.CONNECTION_STRING}` as string,
@@ -48,14 +45,33 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello world and humans");
 });
 
-app.post("/", (req: Request, res: Response) => {
-  console.log(req);
-  res.status(201).json({ success: true, message: "User created" });
+app.post("/create-user", async (req: Request, res: Response) => {
+  const { name, email, age, phone, address } = req.body;
+
+  try {
+    const result = await pool.query(
+      `
+      INSERT INTO users (name, email, age, phone, address)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+      `,
+      [name, email, age, phone, address]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "User created",
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Error while user creation",
+    });
+  }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on ${port}`);
+app.listen(process.env.PORT, () => {
+  console.log(`Server is running on ${process.env.PORT}`);
 });
-function cors(): any {
-  throw new Error("Function not implemented.");
-}
